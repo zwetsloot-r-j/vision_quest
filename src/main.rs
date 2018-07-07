@@ -5,25 +5,15 @@ extern crate serde_json;
 
 mod tcp;
 mod actions;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Point {
-    x: i32,
-    y: i32,
-}
+mod message_parser;
+mod state;
 
 fn main() {
-    let point = Point { x: 1, y: 2 };
-    let serialized = serde_json::to_string(&point).unwrap();
-    println!("serialized = {}", serialized);
-
-    let deserialized : Point = serde_json::from_str(&serialized).unwrap();
-    println!("deserialized = {:?}", deserialized);
-
     let rx = tcp::listen().expect("failed to make tcp connection");
+    let mut application_state = state::State::new();
 
     loop {
         let action = rx.recv().expect("error receiving msg");
-        actions::run(action).expect("Failed to run action");
+        application_state = actions::run(action, application_state).expect("Failed to run action");
     }
 }

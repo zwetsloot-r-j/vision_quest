@@ -4,25 +4,25 @@ use std::sync::mpsc::Sender;
 use std::net::TcpStream;
 use tcp::receive;
 use message_parser::parse;
-use state::{State, HistoryItem};
+use state::{State, Status, HistoryItem};
 
 pub enum Message {
     Empty,
-    Raw((String, Sender<Action>)),
-    Client((Arc<Mutex<TcpStream>>, Sender<Action>)),
+    Raw(String),
+    Client(Arc<Mutex<TcpStream>>),
     HistoryItem(HistoryItem),
     Json(String),
 }
 
 impl Message {
-    pub fn expect_raw(self) -> (String, Sender<Action>) {
+    pub fn expect_raw(self) -> String {
         match self {
             Message::Raw(content) => Ok(content),
             _ => Err("Expected Message::Raw"),
         }.unwrap()
     }
 
-    pub fn expect_client(self) -> (Arc<Mutex<TcpStream>>, Sender<Action>) {
+    pub fn expect_client(self) -> Arc<Mutex<TcpStream>> {
         match self {
             Message::Client(content) => Ok(content),
             _ => Err("Expected Message::Client"),
@@ -59,16 +59,16 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
 
     match (action.domain.as_str(), action.invocation.as_str()) {
         ("client", "add") => {
-            let (socket, tx) = action.message.expect_client();
-            receive(socket, tx, action.sender.clone())?;
+            let socket = action.message.expect_client();
+            receive(socket, state.dispatcher.clone(), action.sender.clone())?;
 
             state.add_client(action.sender.clone());
             Ok(state)
         },
         ("client", "receive") => {
-            let (content, tx) = action.message.expect_raw();
+            let content = action.message.expect_raw();
             let action = parse(content, action.sender)?;
-            tx.send(action).expect("Failed to handle client action");
+            state.dispatcher.send(action).expect("Failed to handle client action");
 
             Ok(state)
         },
@@ -76,6 +76,10 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
             let historyItem = action.message.expect_history_item();
 
             state.add_history_item(action.sender.clone(), historyItem);
+            Ok(state)
+        },
+        ("application", "quit") => {
+            state.status = Status::ShuttingDown;
             Ok(state)
         },
         ("ping", "pong") => {

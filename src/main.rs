@@ -1,9 +1,14 @@
 use std::sync::Arc;
+use std::sync::mpsc::{channel};
+use std::thread;
 
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+
+#[macro_use]
+extern crate conrod;
 
 mod tcp;
 mod actions;
@@ -12,13 +17,23 @@ mod state;
 mod ui;
 
 fn main() {
-    let rx = tcp::listen().expect("failed to make tcp connection");
-    let tx = ui::run().expect("failed to initialize ui");
-    let mut application_state = state::State::new();
+    let (ui_tx, ui_rx) = channel();
 
-    loop {
-        let action = rx.recv().expect("error receiving msg");
-        application_state = actions::run(action, application_state).expect("Failed to run action");
-        tx.send(application_state.clone());
-    }
+    thread::spawn(move || {
+        let (tx, rx) = tcp::listen().expect("failed to make tcp connection");
+        let mut application_state = state::State::new(tx);
+
+        loop {
+            let action = rx.recv().expect("error receiving msg");
+            application_state = actions::run(action, application_state).expect("Failed to run action");
+            ui_tx.send(application_state.clone());
+
+            match application_state.status {
+                state::Status::ShuttingDown => break,
+                _ => (),
+            };
+        }
+    });
+
+    ui::run(ui_rx);
 }

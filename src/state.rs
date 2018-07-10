@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::mpsc::Sender;
+use ::actions::Action;
 
 pub struct HistoryAction {
     domain: String,
@@ -100,14 +102,36 @@ impl Clone for Client {
     }
 }
 
+pub enum Status {
+    Initializing,
+    Running,
+    Paused,
+    ShuttingDown,
+}
+
+impl Clone for Status {
+    fn clone(&self) -> Status {
+        match self {
+            Status::Initializing => Status::Initializing,
+            Status::Running => Status::Running,
+            Status::Paused => Status::Paused,
+            Status::ShuttingDown => Status::ShuttingDown,
+        }
+    }
+}
+
 pub struct State {
     clients: HashMap<String, Client>,
+    pub status: Status,
+    pub dispatcher: Sender<Action>,
 }
 
 impl State {
-    pub fn new() -> State {
+    pub fn new(dispatcher: Sender<Action>) -> State {
         State {
             clients: HashMap::new(),
+            status: Status::Initializing,
+            dispatcher: dispatcher,
         }
     }
 
@@ -138,6 +162,8 @@ impl Clone for State {
     fn clone(&self) -> State {
         State {
             clients: self.clients.clone(),
+            status: self.status.clone(),
+            dispatcher: self.dispatcher.clone(),
         }
     }
 }

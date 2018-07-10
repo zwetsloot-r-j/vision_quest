@@ -6,8 +6,9 @@ use std::io::{Error, Read};
 use std::str::from_utf8;
 use actions::{Action, Message};
 
-pub fn listen() -> Result<Receiver<Action>, Error> {
+pub fn listen() -> Result<(Sender<Action>, Receiver<Action>), Error> {
     let (tx, rx) = channel();
+    let tx_clone = tx.clone();
     let listener = TcpListener::bind("127.0.0.1:7033")?;
 
     thread::spawn(move || {
@@ -17,7 +18,7 @@ pub fn listen() -> Result<Receiver<Action>, Error> {
             let action = Action {
                 domain: String::from("client"),
                 invocation: String::from("add"),
-                message: Message::Client((Arc::new(Mutex::new(socket)), tx.clone())),
+                message: Message::Client(Arc::new(Mutex::new(socket))),
                 sender: format!("{}", address),
             };
 
@@ -31,7 +32,7 @@ pub fn listen() -> Result<Receiver<Action>, Error> {
         }
     });
 
-    Ok(rx)
+    Ok((tx_clone, rx))
 }
 
 pub fn receive(socket : Arc<Mutex<TcpStream>>, tx : Sender<Action>, sender : String) -> Result<(), Error> {
@@ -56,7 +57,7 @@ pub fn receive(socket : Arc<Mutex<TcpStream>>, tx : Sender<Action>, sender : Str
                         let action = Action {
                             domain: String::from("client"),
                             invocation: String::from("receive"),
-                            message: Message::Raw((String::from(message), tx.clone())),
+                            message: Message::Raw(String::from(message)),
                             sender: sender.clone(),
                         };
 

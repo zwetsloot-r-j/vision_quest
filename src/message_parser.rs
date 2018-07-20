@@ -46,7 +46,7 @@ struct Packet {
 }
 
 pub fn parse(raw : String, sender : String) -> Result<Action, Error> {
-    let packet : Packet = serde_json::from_str(&raw)?;
+    let packet : Packet = serde_json::from_str(&raw).expect("failed to parse");
     let message = packet.Payload.to_message()?;
 
     Ok(Action {

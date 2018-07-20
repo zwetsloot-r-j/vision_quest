@@ -9,6 +9,8 @@ extern crate serde_json;
 
 #[macro_use]
 extern crate conrod;
+#[macro_use]
+extern crate conrod_derive;
 
 mod tcp;
 mod actions;

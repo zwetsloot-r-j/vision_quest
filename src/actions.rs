@@ -2,6 +2,7 @@ use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
 use std::net::TcpStream;
+use std::collections::HashSet;
 use tcp::receive;
 use message_parser::parse;
 use state::{State, Status, HistoryItem};
@@ -12,6 +13,7 @@ pub enum Message {
     Client(Arc<Mutex<TcpStream>>),
     HistoryItem(HistoryItem),
     Json(String),
+    SelectAction((String, HashSet<usize>)),
 }
 
 impl Message {
@@ -42,6 +44,13 @@ impl Message {
             _ => Err("Expected Message::HistoryItem"),
         }.unwrap()
     }
+
+    pub fn expect_select_action(self) -> (String, HashSet<usize>) {
+        match self {
+            Message::SelectAction(content) => Ok(content),
+            _ => Err("Expected Message::SelectAction"),
+        }.unwrap()
+    }
 }
 
 pub struct Action {
@@ -67,6 +76,7 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
         },
         ("client", "receive") => {
             let content = action.message.expect_raw();
+            println!("RAW: {}", content);
             let action = parse(content, action.sender)?;
             state.dispatcher.send(action).expect("Failed to handle client action");
 
@@ -80,6 +90,15 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
         },
         ("application", "quit") => {
             state.status = Status::ShuttingDown;
+            Ok(state)
+        },
+        ("action", "select") => {
+            let (client_id, selections) = action.message.expect_select_action();
+
+            state.clients
+                .entry(client_id)
+                .and_modify(|client| client.update_selections(selections))
+                ;
             Ok(state)
         },
         ("ping", "pong") => {

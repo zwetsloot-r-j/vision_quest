@@ -8,3 +8,4 @@ serde_json = "1.0.22"
 serde_derive = "1.0.69"
 serde = "1.0.69"
 conrod = { version = "0.60.0", features = ["glium", "winit"] }
+conrod_derive = "0.1"

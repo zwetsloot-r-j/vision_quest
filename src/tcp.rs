@@ -44,16 +44,14 @@ pub fn receive(socket : Arc<Mutex<TcpStream>>, tx : Sender<Action>, sender : Str
 
             match socket.lock().unwrap().read(&mut buffer[..]) {
                 Ok(0) => (),
-                Ok(_size) => {
-                    println!("received socket msg");
-                    data.push_str(from_utf8(&buffer).expect("failed to convert tcp data to string"));
+                Ok(size) => {
+                    data.push_str(from_utf8(&buffer[..size]).expect("failed to convert tcp data to string"));
 
                     let data_clone = data.clone();
                     let chunks : Vec<&str> = data_clone.split("\n").collect();
                     let (&rest, messages) = chunks.split_last().unwrap();
 
                     for &message in messages {
-
                         let action = Action {
                             domain: String::from("client"),
                             invocation: String::from("receive"),

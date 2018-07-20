@@ -1,50 +1,49 @@
+mod client;
+mod action;
+mod action_list;
+mod tabs;
+mod payload;
+mod item_state;
+mod id_state;
+mod renderer;
+mod json_inspector;
+
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::Arc;
 use std::thread;
 use std::io::{Error, ErrorKind};
-use ::state::{State, Status};
+use std::slice::Iter;
+use std::collections::HashMap;
+use ::state::{State, Status, Client};
 use ::actions::{Message, Action};
 use conrod::backend::winit;
 use conrod::backend::glium;
 use conrod::backend::glium::glium::{glutin, texture, Surface, Display};
 use conrod::backend::glium::glium::glutin::{EventsLoop, Event, WindowBuilder, ContextBuilder};
-use conrod::{image, Ui, UiBuilder, color, widget, Colorable, Positionable, Widget};
+use conrod::{image, Ui, UiCell, UiBuilder, color, widget, Colorable, Positionable, Widget, Sizeable};
+use self::id_state::IdState;
+use self::renderer::Renderer;
 
 widget_ids! {
     pub struct Ids {
+        tab,
         canvas,
+        client_canvases[],
         title,
         text,
+        client_texts[],
         button,
         canvas_scrollbar,
-    }
-}
-
-struct Renderer {
-    renderer: glium::Renderer,
-    display: Display,
-    image_map: image::Map::<texture::Texture2d>,
-    ui: Ui,
-    ids: Ids,
-    events_loop: glutin::EventsLoop,
-    events: Vec<glutin::Event>,
-}
-
-impl Renderer {
-    fn draw(&mut self) {
-        if let Some(primitives) = self.ui.draw_if_changed() {
-            self.renderer.fill(&self.display, primitives, &self.image_map);
-            let mut target = self.display.draw();
-            target.clear_color(0.0, 0.0, 0.0, 1.0);
-            self.renderer.draw(&self.display, &mut target, &self.image_map).unwrap();
-            target.finish().unwrap();
-        }
+        action_lists[],
+        action_buttons[],
+        payload_texts[],
+        item_state_texts[],
     }
 }
 
 pub fn run(rx: Receiver<State>) {
     let mut state = rx.recv().expect("Ui failed to receive application state");
-    let mut renderer = init().expect("Ui failed to init renderer");
+    let mut renderState = init().expect("Ui failed to init renderer");
 
     loop {
         match rx.try_recv() {
@@ -58,11 +57,11 @@ pub fn run(rx: Receiver<State>) {
             _ => (),
         };
 
-        render(&state, &mut renderer);
+        renderState = render(&state, renderState);
     }
 }
 
-fn init() -> Result<Renderer, Error> {
+fn init() -> Result<(Renderer, Ids), Error> {
     const WIDTH: u32 = 1024;
     const HEIGHT: u32 = 768;
     const FONT_PATH: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/NotoSans/NotoSans-Regular.ttf");
@@ -86,18 +85,20 @@ fn init() -> Result<Renderer, Error> {
     let renderer = glium::Renderer::new(&display).expect("Failed to create ui renderer");
     let image_map = image::Map::<texture::Texture2d>::new();
 
-    Ok(Renderer {
+    Ok((Renderer {
         renderer: renderer,
         display: display,
         image_map: image_map,
         ui: ui,
-        ids: ids,
         events_loop: events_loop,
         events: Vec::new(),
-    })
+    }, ids))
 }
 
-fn render(state: &State, renderer: &mut Renderer) {
+fn render(state: &State, (mut renderer, mut ids) : (Renderer, Ids)) -> (Renderer, Ids) {
+    const WIDTH: u32 = 1024;
+    const HEIGHT: u32 = 768;
+
     let mut events = Vec::new();
     renderer.events_loop.poll_events(|event| events.push(event));
 
@@ -108,6 +109,8 @@ fn render(state: &State, renderer: &mut Renderer) {
         });
     }
 
+    let mut idState = IdState::new(ids);
+
     for event in events.drain(..) {
         handle_ui_event(event.clone(), &state);
 
@@ -116,17 +119,20 @@ fn render(state: &State, renderer: &mut Renderer) {
             Some(input) => input,
         };
 
-        renderer.ui.handle_event(input);
-        let ui_ref = &mut renderer.ui.set_widgets();
+        idState.reset();
 
-        widget::Text::new("Hello World!")
-            .middle_of(ui_ref.window)
-            .color(color::WHITE)
-            .font_size(32)
-            .set(renderer.ids.text, ui_ref);
+        renderer.ui.handle_event(input);
+        let ui_cell = &mut renderer.set_widgets();
+
+        idState.generate_client_widget_ids(state.client_amount(), ui_cell);
+        idState = tabs::render(idState, ui_cell, state);
+        for (_, client_state) in &state.clients {
+            idState = client::render(idState, ui_cell, &client_state, state);
+        }
     }
 
     renderer.draw();
+    (renderer, idState.unwrap())
 }
 
 fn handle_ui_event(event: Event, state: &State) {

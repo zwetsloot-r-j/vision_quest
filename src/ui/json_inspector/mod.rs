@@ -43,26 +43,6 @@ pub struct State {
     children_heights: Option<Vec<f64>>,
 }
 
-pub fn calculate_json_height(value: &serde_json::Value) -> f64 {
-    match *value {
-        serde_json::Value::Array(ref v) => {
-            let height = v.iter()
-                .map(|v| calculate_json_height(v))
-                .sum()
-                ;
-            f64::max(25.0, height)
-        },
-        serde_json::Value::Object(ref v) => {
-            let height = v.iter()
-                .map(|(_, v)| calculate_json_height(v))
-                .sum()
-                ;
-            f64::max(25.0, height)
-        },
-        _ => 25.0,
-    }
-}
-
 impl JsonInspector {
     pub fn new(content: serde_json::Value, mut key: String) -> Self {
         key.push_str(": ");
@@ -83,13 +63,17 @@ impl JsonInspector {
         }
     }
 
+    fn key_button_width(ref key: &String) -> f64 {
+        f64::max(150.0, (key.len() * 10) as f64)
+    }
+
     fn make_key(&self, parent_id: widget::Id, state: &State, key: String, ui: &mut UiCell) -> Option<()> {
         match self.content {
             serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
                 let color = if state.opened { conrod::color::LIGHT_BLUE } else { conrod::color::BLUE };
                 let button = widget::Button::new()
                     .color(color)
-                    .w_h(150.0, 25.0)
+                    .w_h(JsonInspector::key_button_width(&key), 25.0)
                     .top_left_of(parent_id)
                     .label(key.as_str())
                     .set(state.ids.button, ui)
@@ -118,7 +102,7 @@ impl JsonInspector {
     fn make_list_content(&self, state: &State, ui: &mut UiCell) -> Option<Vec<f64>> {
         if (state.opened) {
             let (mut items, scrollbar) = widget::List::flow_down(self.item_amount())
-                .w_h(700.0, state.height)
+                .w_h(1500.0, state.height)
                 .right_from(self.key_id(state), 5.0)
                 .set(state.ids.json, ui)
                 ;
@@ -127,7 +111,7 @@ impl JsonInspector {
             while let Some(item) = items.next(ui) {
                 let (key, json_item) = self.get_item(item.i).expect("json item index out of range");
                 let json_insp = JsonInspector::new(json_item, key.clone())
-                    .h(self.get_item_height(item.i, state));
+                    .w_h(1500.0, self.get_item_height(item.i, state));
 
                 let child_height = item.set(json_insp, ui);
 

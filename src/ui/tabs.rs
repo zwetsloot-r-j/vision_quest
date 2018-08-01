@@ -2,13 +2,11 @@ use ::state::State;
 use ::ui::IdState;
 use conrod::{widget, color, UiCell, Colorable, Positionable, Widget, Sizeable};
 
-pub fn render(mut idState: IdState, ui_cell: &mut UiCell, ref state: &State) -> IdState {
-    //idState.generate_client_canvases(state.clients.len(), ui_cell);
-
+pub fn render(id_state: IdState, ui_cell: &mut UiCell, ref state: &State) -> IdState {
     let mut tabs: Vec<(widget::Id, &str)> = Vec::new();
 
     for (index, (id, _client)) in state.clients.iter().enumerate() {
-        tabs.push((idState.ids.client_canvases[index], id));
+        tabs.push((id_state.ids.client_canvases[index], id));
     };
 
     widget::Tabs::new(&tabs)
@@ -18,9 +16,9 @@ pub fn render(mut idState: IdState, ui_cell: &mut UiCell, ref state: &State) -> 
         .color(color::LIGHT_BLUE)
         .bar_thickness(50.0)
         .starting_tab_idx(0)
-        .starting_canvas(idState.ids.client_canvases[0])
-        .set(idState.ids.tab, ui_cell)
+        .starting_canvas(id_state.ids.client_canvases[0])
+        .set(id_state.ids.tab, ui_cell)
         ;
 
-    idState
+    id_state
 }

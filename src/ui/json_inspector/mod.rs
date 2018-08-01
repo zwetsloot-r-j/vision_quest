@@ -1,6 +1,5 @@
 use std::f64;
-use conrod::{self, widget, Widget, Colorable, Labelable, Point, Positionable, Sizeable, Borderable, UiCell};
-use conrod::widget::{Text, Button};
+use conrod::{self, widget, Widget, Colorable, Labelable, Positionable, Sizeable, UiCell};
 use serde_json;
 
 #[derive(WidgetCommon)]
@@ -10,7 +9,6 @@ pub struct JsonInspector {
     style: Style,
     key: String,
     content: serde_json::Value,
-    current_item: usize,
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, WidgetStyle)]
@@ -52,7 +50,6 @@ impl JsonInspector {
             style: Style::default(),
             key: key,
             content: content,
-            current_item: 0,
         }
     }
 
@@ -100,8 +97,8 @@ impl JsonInspector {
     }
 
     fn make_list_content(&self, state: &State, ui: &mut UiCell) -> Option<Vec<f64>> {
-        if (state.opened) {
-            let (mut items, scrollbar) = widget::List::flow_down(self.item_amount())
+        if state.opened {
+            let (mut items, _scrollbar) = widget::List::flow_down(self.item_amount())
                 .w_h(1500.0, state.height)
                 .right_from(self.key_id(state), 5.0)
                 .set(state.ids.json, ui)
@@ -167,20 +164,6 @@ impl JsonInspector {
             .get(index)
             .unwrap_or(&25.0)
     }
-
-    fn next_item(&mut self) -> Option<(String, serde_json::Value)> {
-        let current_item_index = self.current_item;
-        self.current_item += 1;
-        match self.content {
-            serde_json::Value::Array(ref v) => {
-                v.get(current_item_index).map(|ref item| (current_item_index.to_string(), (*item).clone()))
-            },
-            serde_json::Value::Object(ref v) => {
-                v.iter().nth(current_item_index).map(|(ref key, ref value)| ((*key).clone(), (*value).clone()))
-            },
-            _ => None,
-        }
-    }
 }
 
 impl Widget for JsonInspector {
@@ -189,7 +172,7 @@ impl Widget for JsonInspector {
     type Event = f64;
 
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
-        let mut ids = Ids::new(id_gen);
+        let ids = Ids::new(id_gen);
         State {
             ids: ids,
             opened: false,
@@ -203,13 +186,12 @@ impl Widget for JsonInspector {
     }
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        let widget::UpdateArgs { id, state, ui, style, .. } = args;
+        let widget::UpdateArgs { id, state, ui, .. } = args;
         let mut height = 0.0;
 
         widget::Scrollbar::x_axis(id).auto_hide(true).set(state.ids.scroll_horizontal, ui);
         widget::Scrollbar::y_axis(id).auto_hide(true).set(state.ids.scroll_vertical, ui);
 
-        //self.make_key(state.ids.key, id, self.key.clone(), ui);
         match self.make_key(id, state, self.key.clone(), ui) {
             Some(()) => state.update(|state| state.opened = !state.opened),
             _ => (),

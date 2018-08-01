@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use actions::{Message, Action};
 use state::{HistoryState, HistoryItem, HistoryAction};
 
@@ -22,18 +22,17 @@ struct HistoryItemDto {
 impl Payload {
     fn to_message(self) -> Result<Message, Error> {
         match self {
-            Payload::Json(content) => Ok(Message::Json(content)),
+            Payload::Json(content) => Ok(Message::Raw(content)),
             Payload::HistoryItem(content) => {
-                let historyState = HistoryState::new(content.StateType.clone(), content.State.clone());
-                let historyAction = HistoryAction::new(
+                let history_state = HistoryState::new(content.StateType.clone(), content.State.clone());
+                let history_action = HistoryAction::new(
                     content.Domain.clone(),
                     content.Invocation.clone(),
                     content.Amplitude.clone()
                 );
-                let historyItem = HistoryItem::new(historyAction, historyState);
-                Ok(Message::HistoryItem(historyItem))
+                let history_item = HistoryItem::new(history_action, history_state);
+                Ok(Message::HistoryItem(history_item))
             },
-            _ => Err(Error::new(ErrorKind::InvalidData, "Could not convert payload")),
         }
     }
 }

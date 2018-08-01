@@ -1,16 +1,15 @@
 use ::state::{State, HistoryItem};
 use ::ui::id_state::IdState;
 use ::ui::json_inspector;
-use conrod::{widget, color, UiCell, Colorable, Positionable, Widget, Sizeable};
-use conrod::widget::Text;
+use conrod::{UiCell, Positionable, Widget, Sizeable};
 use serde_json;
 
-pub fn render(mut idState: IdState, ui_cell: &mut UiCell, ref item: &HistoryItem, state: &State) -> IdState {
-    let action_lists = idState.ids.action_lists.to_vec();
-    let sibling_id = idState.last(&action_lists, "action_lists").unwrap();
+pub fn render(mut id_state: IdState, ui_cell: &mut UiCell, ref item: &HistoryItem, _state: &State) -> IdState {
+    let action_lists = id_state.ids.action_lists.to_vec();
+    let sibling_id = id_state.last(&action_lists, "action_lists").unwrap();
 
-    let ids = idState.ids.payload_texts.to_vec();
-    let id = idState.next(&ids, "payload_texts").unwrap();
+    let ids = id_state.ids.payload_texts.to_vec();
+    let id = id_state.next(&ids, "payload_texts").unwrap();
 
     json_inspector::JsonInspector::new(serde_json::from_str(item.action.amplitude.as_str()).unwrap(), String::from("amplitude"))
         .right_from(sibling_id, 5.0)
@@ -19,5 +18,5 @@ pub fn render(mut idState: IdState, ui_cell: &mut UiCell, ref item: &HistoryItem
         .set(id, ui_cell)
         ;
 
-    idState
+    id_state
 }

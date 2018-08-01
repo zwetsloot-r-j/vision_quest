@@ -8,19 +8,15 @@ mod id_state;
 mod renderer;
 mod json_inspector;
 
-use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
-use std::sync::Arc;
-use std::thread;
-use std::io::{Error, ErrorKind};
-use std::slice::Iter;
-use std::collections::HashMap;
-use ::state::{State, Status, Client};
+use std::sync::mpsc::{Receiver, TryRecvError};
+use std::io::Error;
+use ::state::{State, Status};
 use ::actions::{Message, Action};
 use conrod::backend::winit;
 use conrod::backend::glium;
-use conrod::backend::glium::glium::{glutin, texture, Surface, Display};
+use conrod::backend::glium::glium::{glutin, texture, Display};
 use conrod::backend::glium::glium::glutin::{EventsLoop, Event, WindowBuilder, ContextBuilder};
-use conrod::{image, Ui, UiCell, UiBuilder, color, widget, Colorable, Positionable, Widget, Sizeable};
+use conrod::{image, UiBuilder};
 use self::id_state::IdState;
 use self::renderer::Renderer;
 
@@ -43,7 +39,7 @@ widget_ids! {
 
 pub fn run(rx: Receiver<State>) {
     let mut state = rx.recv().expect("Ui failed to receive application state");
-    let mut renderState = init().expect("Ui failed to init renderer");
+    let mut render_state = init().expect("Ui failed to init renderer");
 
     loop {
         match rx.try_recv() {
@@ -57,7 +53,7 @@ pub fn run(rx: Receiver<State>) {
             _ => (),
         };
 
-        renderState = render(&state, renderState);
+        render_state = render(&state, render_state);
     }
 }
 
@@ -95,10 +91,7 @@ fn init() -> Result<(Renderer, Ids), Error> {
     }, ids))
 }
 
-fn render(state: &State, (mut renderer, mut ids) : (Renderer, Ids)) -> (Renderer, Ids) {
-    const WIDTH: u32 = 1024;
-    const HEIGHT: u32 = 768;
-
+fn render(state: &State, (mut renderer, ids) : (Renderer, Ids)) -> (Renderer, Ids) {
     let mut events = Vec::new();
     renderer.events_loop.poll_events(|event| events.push(event));
 
@@ -109,7 +102,7 @@ fn render(state: &State, (mut renderer, mut ids) : (Renderer, Ids)) -> (Renderer
         });
     }
 
-    let mut idState = IdState::new(ids);
+    let mut id_state = IdState::new(ids);
 
     for event in events.drain(..) {
         handle_ui_event(event.clone(), &state);
@@ -119,20 +112,20 @@ fn render(state: &State, (mut renderer, mut ids) : (Renderer, Ids)) -> (Renderer
             Some(input) => input,
         };
 
-        idState.reset();
+        id_state.reset();
 
         renderer.ui.handle_event(input);
         let ui_cell = &mut renderer.set_widgets();
 
-        idState.generate_client_widget_ids(state.client_amount(), ui_cell);
-        idState = tabs::render(idState, ui_cell, state);
+        id_state.generate_client_widget_ids(state.client_amount(), ui_cell);
+        id_state = tabs::render(id_state, ui_cell, state);
         for (_, client_state) in &state.clients {
-            idState = client::render(idState, ui_cell, &client_state, state);
+            id_state = client::render(id_state, ui_cell, &client_state, state);
         }
     }
 
     renderer.draw();
-    (renderer, idState.unwrap())
+    (renderer, id_state.unwrap())
 }
 
 fn handle_ui_event(event: Event, state: &State) {
@@ -156,7 +149,7 @@ fn handle_window_event(event: glutin::WindowEvent, state: &State) {
                 sender: String::from("ui"),
             };
 
-            state.dispatcher.send(action);
+            state.dispatcher.send(action).expect("Failed to send quit action to the application state");
         },
         _ => (),
     }

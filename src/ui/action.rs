@@ -1,5 +1,5 @@
 use ::state::HistoryAction;
-use conrod::{widget, color, UiCell, Labelable, Borderable, Colorable, Positionable, Widget, Sizeable};
+use conrod::{widget, color, UiCell, Labelable, Borderable, Colorable};
 use conrod::widget::list::{Item, Down, Fixed};
 
 pub fn render(parent: Item<Down, Fixed>, ui_cell: &mut UiCell, ref action: &HistoryAction) {

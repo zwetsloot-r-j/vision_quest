@@ -8,7 +8,7 @@ pub struct Renderer {
     pub events_loop: glutin::EventsLoop,
     pub events: Vec<glutin::Event>,
     pub renderer: glium::Renderer,
-    pub image_map: image::Map::<texture::Texture2d>,
+    pub image_map: image::Map<texture::Texture2d>,
 }
 
 impl Renderer {

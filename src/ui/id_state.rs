@@ -8,7 +8,7 @@ pub struct IdState {
 }
 
 impl IdState {
-    pub fn new(mut ids: Ids) -> IdState {
+    pub fn new(ids: Ids) -> IdState {
         IdState {
             ids: ids,
             indices: HashMap::new(),
@@ -30,7 +30,7 @@ impl IdState {
     pub fn last(&self, ref id_vec: &Vec<widget::Id>, key: &str) -> Option<widget::Id> {
         match self.indices.get(&String::from(key)) {
             Some(id) => {
-                if (id > &id_vec.len()) {
+                if id > &id_vec.len() {
                     None
                 } else {
                     Some(id_vec[(*id) - 1])
@@ -61,16 +61,6 @@ impl IdState {
 
     fn generate_item_state_texts(&mut self, amount: usize, ui_cell: &mut UiCell) {
         self.ids.item_state_texts.resize(amount, &mut ui_cell.widget_id_generator());
-    }
-
-    // redundent ?
-    pub fn generate_action_buttons(&mut self, amount: usize, ui_cell: &mut UiCell) {
-        self.ids.action_buttons.resize(amount, &mut ui_cell.widget_id_generator());
-    }
-
-    // redundent ?
-    pub fn generate_client_texts(&mut self, amount: usize, ui_cell: &mut UiCell) {
-        self.ids.client_texts.resize(amount, &mut ui_cell.widget_id_generator());
     }
 
     pub fn reset(&mut self) {

@@ -1,6 +1,5 @@
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::Sender;
 use std::net::TcpStream;
 use std::collections::HashSet;
 use tcp::receive;
@@ -12,7 +11,6 @@ pub enum Message {
     Raw(String),
     Client(Arc<Mutex<TcpStream>>),
     HistoryItem(HistoryItem),
-    Json(String),
     SelectAction((String, HashSet<usize>)),
 }
 
@@ -28,13 +26,6 @@ impl Message {
         match self {
             Message::Client(content) => Ok(content),
             _ => Err("Expected Message::Client"),
-        }.unwrap()
-    }
-
-    pub fn expect_json(self) -> String {
-        match self {
-            Message::Json(content) => Ok(content),
-            _ => Err("Expected Message::Json"),
         }.unwrap()
     }
 
@@ -63,7 +54,6 @@ pub struct Action {
 pub fn run(action: Action, mut state: State) -> Result<State, Error> {
     println!("domain: {}", action.domain);
     println!("invocation: {}", action.invocation);
-    // TODO make formatter println!("message: {:?}", action.message);
     println!("sender: {}", action.sender);
 
     match (action.domain.as_str(), action.invocation.as_str()) {
@@ -76,16 +66,15 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
         },
         ("client", "receive") => {
             let content = action.message.expect_raw();
-            println!("RAW: {}", content);
             let action = parse(content, action.sender)?;
             state.dispatcher.send(action).expect("Failed to handle client action");
 
             Ok(state)
         },
         ("item", "add") => {
-            let historyItem = action.message.expect_history_item();
+            let history_item = action.message.expect_history_item();
 
-            state.add_history_item(action.sender.clone(), historyItem);
+            state.add_history_item(action.sender.clone(), history_item);
             Ok(state)
         },
         ("application", "quit") => {

@@ -197,12 +197,6 @@ impl State {
             ;
     }
 
-    pub fn total_history_item_amount(&self) -> usize {
-        self.clients.iter()
-            .map(|(_, ref client)| client.history_item_amount())
-            .sum()
-    }
-
     pub fn client_amount(&self) -> usize {
         self.clients.len()
     }

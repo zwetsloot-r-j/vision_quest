@@ -9,16 +9,20 @@ pub fn render(id_state: IdState, ui_cell: &mut UiCell, ref state: &State) -> IdS
         tabs.push((id_state.ids.client_canvases[index], id));
     };
 
-    widget::Tabs::new(&tabs)
-        .wh_of(ui_cell.window)
-        .mid_top_of(ui_cell.window)
-        .layout_horizontally()
-        .color(color::LIGHT_BLUE)
-        .bar_thickness(50.0)
-        .starting_tab_idx(0)
-        .starting_canvas(id_state.ids.client_canvases[0])
-        .set(id_state.ids.tab, ui_cell)
-        ;
+    if tabs.len() == 0 {
+        id_state
+    } else {
+        widget::Tabs::new(&tabs)
+            .wh_of(ui_cell.window)
+            .mid_top_of(ui_cell.window)
+            .layout_horizontally()
+            .color(color::LIGHT_BLUE)
+            .bar_thickness(50.0)
+            .starting_tab_idx(0)
+            .starting_canvas(id_state.ids.client_canvases[0])
+            .set(id_state.ids.tab, ui_cell)
+            ;
 
-    id_state
+        id_state
+    }
 }

@@ -71,6 +71,10 @@ pub fn run(action: Action, mut state: State) -> Result<State, Error> {
 
             Ok(state)
         },
+        ("client", "remove") => {
+            state.remove_client(action.sender.clone());
+            Ok(state)
+        },
         ("item", "add") => {
             let history_item = action.message.expect_history_item();
 
